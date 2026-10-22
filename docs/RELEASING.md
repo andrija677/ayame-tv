@@ -33,6 +33,12 @@ tag. You can rerun the publishing script after bumping those values, or push the
 tag manually with your configured Git credentials. Never move an existing
 release tag to new code.
 
+To recover the initial release after an SDK setup failure, run
+`bash scripts/retry-github-release.sh`. This pushes the workflow fixes and starts
+the signed release workflow manually for the existing version tag. The workflow
+checks out that tag, so the APK still corresponds to the tagged app source.
+An existing published release is never overwritten by this recovery command.
+
 The workflow expects these encrypted repository secrets:
 
 - `AYAME_KEYSTORE_BASE64`
