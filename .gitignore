@@ -1,0 +1,12 @@
+.gradle/
+.tooling/
+**/build/
+local.properties
+.idea/
+*.iml
+*.jks
+*.keystore
+__pycache__/
+.signing/
+release-assets/
+*.apk

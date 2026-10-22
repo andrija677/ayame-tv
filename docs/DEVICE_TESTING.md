@@ -1,0 +1,65 @@
+# Device acceptance checks
+
+Build first with `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`.
+Record device model, Android version, display scaling, and firmware version.
+
+Repeat navigation at 720p, 1080p, and 4K output where supported, and with larger
+Android display/text settings. Physical pixels and Android window dp are different:
+record both. Include 640×360, 960×540, and 1280×720 dp emulator windows, plus
+1.0×, 1.3×, 1.5×, and 2.0× text scales. Check every column setting from 3 through
+7; the effective count should drop before tiles become too narrow. On shorter
+windows the clock moves into the scrollable navigation bar. Panels must remain
+within the window and their contents must scroll, including app options.
+
+1. Install and open as an ordinary app. Confirm the stock home remains usable.
+2. Use only the remote: visit every top-bar item, app, settings control, popup,
+   and theme action. Focus must remain visible and scroll into view.
+3. Open/close settings and app options with OK and Back repeatedly. Focus must
+   return to the initiating control; hidden controls must not take D-pad focus.
+4. Launch TV apps, including an app with separate phone and TV activities.
+   Return home. Check optional non-TV apps and unavailable-app error handling.
+5. Pin three apps; move them left/right; unpin; restart Ayame and verify order.
+6. Install, update, and uninstall an app while Ayame is running. Revisit Ayame
+   and verify the list updates without stale launch targets or duplicate apps.
+7. Import a warm, cool, monochrome, very large, and invalid wallpaper. Check
+   palette, readability, restart persistence, cancellation, and picker absence.
+8. Test minimum/maximum columns, corners, opacity, and dimming in both modes.
+   Toggle labels, clock, time format, and animations. No action requires touch.
+9. Export a theme, change preferences, import, and verify restoration. Try
+   malformed JSON, unsupported schema versions, and oversized files.
+10. Press Back at the root; it should keep the home open. Check Home intent
+    resets navigation when Ayame is selected as the launcher.
+11. Rapidly navigate for several minutes; check no clipping, focus loss, stuck
+    animations, rising memory, or image-decoding work on the main thread.
+12. Switch Home/All Apps rapidly, then open/close settings, app options, and the
+    gallery during transitions. Outgoing content must not take focus. Test every
+    settings category with the remote, including the horizontal narrow layout.
+13. Toggle glass, frost, animations, and bounce independently; export/import and
+    relaunch to verify persistence. With animations off, tab indicators, switches,
+    focus scaling, page changes, and dialogs must change immediately. Compare
+    navigation frame pacing with frost enabled and disabled on the actual Stick.
+14. Use arrow keys without clicking: select Home/All Apps in the bar, press Down
+    into apps, traverse every grid edge and a partial final row, and press Up
+    from the top row. Scroll beyond initially mounted apps, return to the bar,
+    and press Down to check focus restoration. Search Up/Down must link the
+    bar, text field, and results. In settings, test category Up/Down, Right into
+    content, Left back to the rail, and minus/plus focus within each stepper.
+15. On a bright wallpaper, open settings above the app grid. Confirm app labels
+    underneath no longer show through the panel. Check text contrast in both
+    appearances, with frost on/off and at the surface-tint extremes.
+16. Verify the rounded font loads on the emulator and Stick. Check the bar's
+    consistent gaps, title/hint/clock backings over very bright and very dark
+    images, TV banners and icon-only apps, and larger text at every column count.
+    Focus enlargement must leave captions and the 16:9 image surface unclipped.
+
+Useful diagnostics with an already connected TV:
+
+```bash
+adb shell getprop ro.build.version.release
+adb shell dumpsys meminfo dev.andrija.ayametv
+adb shell dumpsys gfxinfo dev.andrija.ayametv
+adb logcat -d -s AndroidRuntime
+```
+
+If the app crashes, preserve the exception and stack trace. Do not select it as
+the default launcher until basic launch, persistence, and recovery checks pass.
