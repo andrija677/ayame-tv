@@ -51,8 +51,44 @@ within the window and their contents must scroll, including app options.
     consistent gaps, title/hint/clock backings over very bright and very dark
     images, TV banners and icon-only apps, and larger text at every column count.
     Focus enlargement must leave captions and the 16:9 image surface unclipped.
+17. Open Settings: Home tiles and the Home navigation bar must disappear, leaving
+    a full page over the wallpaper. Test Back, Back to Home, and the remote Home
+    button; focus must return to the originating navigation item.
+18. Apply every home preset, then mix top bars, app tile shapes, icon size, clock
+    position, and date visibility. Test both app pages at compact and large sizes.
+    Export/import the custom style and an older theme without style fields.
+    Presets must keep wallpaper colors, favorites, app visibility, and motion settings.
 
 Useful diagnostics with an already connected TV:
+
+For performance comparisons, use a signed release APK and the same wallpaper,
+columns, animation settings, and output resolution. Reset frame counters with
+`adb shell dumpsys gfxinfo dev.andrija.ayametv reset`, navigate the same route
+for 30 seconds, then save `adb shell dumpsys gfxinfo dev.andrija.ayametv framestats`.
+Compare frost on/off and check janky frames and frame-time percentiles. The frost
+texture is now prepared once in the background and shared across glass surfaces;
+there should be no per-surface live blur. Check wallpaper replacement and frost
+toggles for correct colors, alignment, and memory settling after several changes.
+
+## Default Home on a TV
+
+Open Ayame Settings → System → Use Ayame as Home. On Android 10+ this requests
+the Home role when available; otherwise it opens Android's Home settings.
+If the TV hides both, connect ADB and run from the project directory:
+
+```bash
+bash scripts/set-tv-home.sh YOUR_ADB_SERIAL
+```
+
+Use the serial printed by `adb devices` (for network ADB, normally IP:port).
+The script saves the previous resolved Home component when possible, sets Ayame
+for the current user, verifies resolution, and starts Home. It leaves all stock
+packages enabled. Test Home from another app and after reboot; firmware can
+still intercept the remote or reset the preferred activity. Restore with
+`bash scripts/set-tv-home.sh YOUR_ADB_SERIAL restore` if a previous Home was saved.
+Do not uninstall Ayame while it is the selected Home app; restore Home first.
+
+## Diagnostics
 
 ```bash
 adb shell getprop ro.build.version.release

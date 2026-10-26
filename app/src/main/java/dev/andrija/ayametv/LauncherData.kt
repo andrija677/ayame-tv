@@ -41,6 +41,11 @@ data class Preferences(
     val clock24: Boolean = true,
     val showLabels: Boolean = true,
     val showMobileApps: Boolean = false,
+    val navigationStyle: NavigationStyle = NavigationStyle.Bar,
+    val appTileStyle: AppTileStyle = AppTileStyle.Banner,
+    val iconScale: Int = 72,
+    val clockPlacement: ClockPlacement = ClockPlacement.Left,
+    val showDate: Boolean = true,
     val favorites: List<String> = emptyList(),
 ) {
     fun json(): JSONObject = JSONObject().apply {
@@ -61,6 +66,11 @@ data class Preferences(
         put("clock24", clock24)
         put("showLabels", showLabels)
         put("showMobileApps", showMobileApps)
+        put("navigationStyle", navigationStyle.name)
+        put("appTileStyle", appTileStyle.name)
+        put("iconScale", iconScale)
+        put("clockPlacement", clockPlacement.name)
+        put("showDate", showDate)
         put("favorites", JSONArray(favorites))
     }
 
@@ -87,6 +97,11 @@ data class Preferences(
                 clock24 = json.optBoolean("clock24", true),
                 showLabels = json.optBoolean("showLabels", true),
                 showMobileApps = json.optBoolean("showMobileApps", false),
+                navigationStyle = enumPreference(json.optString("navigationStyle"), NavigationStyle.Bar),
+                appTileStyle = enumPreference(json.optString("appTileStyle"), AppTileStyle.Banner),
+                iconScale = json.optInt("iconScale", 72).coerceIn(45, 90),
+                clockPlacement = enumPreference(json.optString("clockPlacement"), ClockPlacement.Left),
+                showDate = json.optBoolean("showDate", true),
                 favorites = (0 until pins.length()).map { pins.getString(it) }
                     .filter { id ->
                         val parts = id.split('/')

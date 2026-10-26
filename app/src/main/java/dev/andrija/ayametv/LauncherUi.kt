@@ -51,7 +51,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -82,6 +81,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.ColorUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
@@ -203,9 +204,7 @@ private fun GlassFrame(modifier: Modifier = Modifier, content: @Composable BoxSc
         else maxOf(p.surfaceOpacity / 100f, protection.opacity)
     Box(modifier.clip(shape)) {
         if (p.glassEnabled && backdrop != null) {
-            WallpaperGlassBackdrop(backdrop,
-                modifier = Modifier.matchParentSize().then(if (p.glassBlur) Modifier.blur(24.dp) else Modifier)
-                    .graphicsLayer { alpha = 1f })
+            WallpaperGlassBackdrop(backdrop, modifier = Modifier.matchParentSize())
         }
         Box(Modifier.matchParentSize().background(tint.copy(alpha = opacity)))
         if (p.glassEnabled) {
@@ -254,8 +253,15 @@ fun AyameLauncher(
         primary = accent, onPrimary = animated.onAccent, surface = surface,
         onSurface = animated.text, background = animated.background,
     )
+    val frostEnabled = preferences.glassEnabled && preferences.glassBlur
+    val frost by produceState<Bitmap?>(null, wallpaper, frostEnabled) {
+        value = null
+        if (frostEnabled && wallpaper != null) {
+            value = withContext(Dispatchers.Default) { frostedWallpaper(wallpaper) }
+        }
+    }
     CompositionLocalProvider(LocalShellColors provides animated, LocalPreferences provides preferences,
-        LocalBackdrop provides wallpaper) {
+        LocalBackdrop provides if (frostEnabled) frost else wallpaper) {
         MaterialTheme(colorScheme = scheme, typography = roundedTypography()) {
             var settings by remember { mutableStateOf(false) }
             val panelProgress by animateFloatAsState(if (settings) 1f else 0f,
@@ -322,7 +328,8 @@ fun AyameLauncher(
             LaunchedEffect(homeRequest) {
                 if (homeRequest > 0) {
                     settings = false; selected = null; searching = false; query = ""; tab = "home"
-                    delay(80); initialFocus.requestFocus()
+                    lastFocused = "nav:home"
+                    pendingRestore = true
                 }
             }
             LaunchedEffect(searching) {
@@ -370,7 +377,8 @@ fun AyameLauncher(
                     return true
                 }
                 Wallpaper(wallpaper)
-                Column(Modifier.fillMaxSize().focusProperties { canFocus = !settings && selected == null }
+                if (!settings && panelProgress == 0f) {
+                Column(Modifier.fillMaxSize().focusProperties { canFocus = selected == null }
                     .padding(horizontal = layout.horizontalInset.dp, vertical = layout.verticalInset.dp)) {
                     TopNavigation(tab, layout.compactHeight, navigationFocus, restoreKey, restoreGeneration,
                         onFocus = { lastFocused = it },
@@ -440,7 +448,7 @@ fun AyameLauncher(
                             LazyRow(
                                 state = homeScroll,
                                 modifier = Modifier.fillMaxWidth().height(
-                                    (layout.tileWidth * 9f / 16f + 28f +
+                                    (layout.tileWidth / preferences.appTileStyle.aspectRatio + 28f +
                                         if (preferences.showLabels) 12f + 24f * fontScale else 0f).dp
                                 ).focusGroup(),
                                 contentPadding = PaddingValues(horizontal = 9.dp, vertical = 12.dp),
@@ -480,12 +488,13 @@ fun AyameLauncher(
                         }
                     }
                 }
-                // Modal panels own focus while the home remains visible underneath.
-                if (settings || selected != null) {
+                }
+                // Settings is a full page over the wallpaper; only app menus dim Home.
+                if (selected != null) {
                     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .42f)))
                 }
                 if (settings || panelProgress > 0f) {
-                    SettingsPanel(preferences, busy, panelProgress, installedVersion, updateStatus, updateBusy,
+                    SettingsPage(preferences, busy, panelProgress, settings, installedVersion, updateStatus, updateBusy,
                         availableVersion, onCheckUpdates, onInstallUpdate, onPreferences, ::closeSettings,
                         onWallpaper, onOpenGallery, onClearWallpaper, onExtractColors, onExport, onImport,
                         onSystemSettings, onHomeSettings)
@@ -531,15 +540,15 @@ private fun TopNavigation(
         right = if (index < 3) focus[index + 1] else FocusRequester.Cancel
         up = FocusRequester.Cancel
     }
-    GlassFrame(Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
-        if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) { onDown(); true } else false
-    }) {
+    val navigationContent: @Composable BoxScope.() -> Unit = {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box {
                 Box(Modifier.matchParentSize()) {
-                    Box(Modifier.offset { IntOffset(pillX.roundToInt(), 0) }
-                        .width(with(density) { pillWidth.coerceAtLeast(1f).toDp() }).fillMaxHeight()
+                    Box(Modifier.align(if (p.navigationStyle == NavigationStyle.Minimal) Alignment.BottomStart else Alignment.TopStart)
+                        .offset { IntOffset(pillX.roundToInt(), 0) }
+                        .width(with(density) { pillWidth.coerceAtLeast(1f).toDp() })
+                        .then(if (p.navigationStyle == NavigationStyle.Minimal) Modifier.height(3.dp) else Modifier.fillMaxHeight())
                         .clip(RoundedCornerShape(50)).background(c.accent.copy(alpha = .22f))
                         .border(1.dp, c.accent.copy(alpha = .30f), RoundedCornerShape(50)))
                 }
@@ -559,6 +568,16 @@ private fun TopNavigation(
             if (p.showClock && compact) Clock(p.clock24, 16f, compact = true)
         }
     }
+    Box(Modifier.fillMaxWidth(), contentAlignment = if (p.navigationStyle == NavigationStyle.Dock)
+        Alignment.TopCenter else Alignment.TopStart) {
+        val frame = Modifier.then(if (p.navigationStyle == NavigationStyle.Dock) Modifier.widthIn(max = 720.dp) else Modifier)
+            .fillMaxWidth().onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) { onDown(); true } else false
+            }
+        if (p.navigationStyle == NavigationStyle.Minimal) Box(frame, content = navigationContent)
+        else GlassFrame(frame, content = navigationContent)
+    }
+
 }
 
 @Composable
@@ -587,10 +606,17 @@ private fun Wallpaper(bitmap: Bitmap?) {
 @Composable
 private fun Clock(use24: Boolean, clockSize: Float, modifier: Modifier = Modifier, compact: Boolean = false) {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
-    LaunchedEffect(Unit) { while (true) { now = LocalDateTime.now(); delay(1000) } }
+    LaunchedEffect(Unit) { while (true) { now = LocalDateTime.now(); delay(60_000L - System.currentTimeMillis() % 60_000L) } }
     val c = LocalShellColors.current
+    val p = LocalPreferences.current
+    val alignment = when (p.clockPlacement) {
+        ClockPlacement.Left -> Alignment.Start
+        ClockPlacement.Center -> Alignment.CenterHorizontally
+        ClockPlacement.Right -> Alignment.End
+    }
     val protection = remember(c.text, c.surface) { protectText(c.text.toArgb(), c.surface.toArgb()) }
-    Column(modifier, verticalArrangement = Arrangement.Center) {
+    Column(modifier.then(if (!compact) Modifier.fillMaxWidth() else Modifier),
+        horizontalAlignment = alignment, verticalArrangement = Arrangement.Center) {
         Column(Modifier.clip(RoundedCornerShape(if (compact) 12.dp else 22.dp))
             .background(Color(protection.backing).copy(alpha = protection.opacity))
             .padding(horizontal = if (compact) 10.dp else 16.dp, vertical = if (compact) 5.dp else 10.dp)) {
@@ -598,7 +624,7 @@ private fun Clock(use24: Boolean, clockSize: Float, modifier: Modifier = Modifie
                 color = Color(protection.foreground), style = MaterialTheme.typography.displayLarge.copy(
                     fontSize = clockSize.sp, lineHeight = (clockSize * 1.15f).sp,
                     fontWeight = FontWeight.SemiBold, letterSpacing = (-1).sp))
-            if (!compact) {
+            if (!compact && p.showDate) {
                 Text(now.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
                     color = Color(protection.foreground), fontSize = 17.sp, fontWeight = FontWeight.Medium)
             }
@@ -665,16 +691,17 @@ private fun AppTile(
             onClick = onClick, onLongClick = onOptions),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        GlassFrame(Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+        val tileShape = if (p.appTileStyle == AppTileStyle.Circle) RoundedCornerShape(50) else shape
+        GlassFrame(Modifier.fillMaxWidth().aspectRatio(p.appTileStyle.aspectRatio).clip(tileShape)
             .border(BorderStroke(if (focused) 2.dp else 1.dp,
-                if (focused) c.accent else c.text.copy(alpha = .10f)), shape)) {
-            if (app.banner != null) {
+                if (focused) c.accent else c.text.copy(alpha = .10f)), tileShape)) {
+            if (p.appTileStyle == AppTileStyle.Banner && app.banner != null) {
                 Image(app.banner.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize())
             } else {
                 BoxWithConstraints(Modifier.fillMaxSize().background(fill.copy(alpha = .22f)), contentAlignment = Alignment.Center) {
                     Image(app.icon.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Fit,
-                        modifier = Modifier.size((maxHeight * .72f).coerceAtMost(64.dp)))
+                        modifier = Modifier.size((minOf(maxHeight, maxWidth) * (p.iconScale / 100f)).coerceAtMost(144.dp)))
                 }
             }
         }
@@ -727,8 +754,57 @@ private fun AppOptions(
 }
 
 @Composable
-private fun SettingsPanel(
-    p: Preferences, busy: Boolean, progress: Float,
+private fun <T> ChoiceSetting(title: String, choices: List<T>, selected: T, label: (T) -> String, change: (T) -> Unit) {
+    val index = choices.indexOf(selected).coerceAtLeast(0)
+    StepSetting(title, label(selected),
+        { change(choices[(index + choices.size - 1) % choices.size]) },
+        { change(choices[(index + 1) % choices.size]) })
+}
+
+@Composable
+private fun StylePreview(style: HomeStyle, current: Preferences, apply: () -> Unit) {
+    val c = LocalShellColors.current
+    val preview = style.applyTo(current)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+        .background(c.surface.copy(alpha = .65f)).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Canvas(Modifier.size(width = 112.dp, height = 72.dp).clip(RoundedCornerShape(10.dp))
+            .background(Brush.linearGradient(listOf(c.background, c.accent.copy(alpha = .35f))))) {
+            val barWidth = size.width * if (preview.navigationStyle == NavigationStyle.Dock) .62f else .88f
+            val barLeft = (size.width - barWidth) / 2
+            drawRoundRect(c.text.copy(alpha = .25f), Offset(barLeft, size.height * .12f),
+                androidx.compose.ui.geometry.Size(barWidth, if (preview.navigationStyle == NavigationStyle.Minimal) 2f else size.height * .12f),
+                androidx.compose.ui.geometry.CornerRadius(4f))
+            if (preview.showClock) {
+                val x = when (preview.clockPlacement) {
+                    ClockPlacement.Left -> size.width * .08f
+                    ClockPlacement.Center -> size.width * .38f
+                    ClockPlacement.Right -> size.width * .68f
+                }
+                drawRoundRect(c.text.copy(alpha = .8f), Offset(x, size.height * .37f),
+                    androidx.compose.ui.geometry.Size(size.width * .23f, size.height * .09f),
+                    androidx.compose.ui.geometry.CornerRadius(3f))
+            }
+            repeat(4) { index ->
+                val tileWidth = size.width * .18f
+                val tileHeight = tileWidth / preview.appTileStyle.aspectRatio
+                val origin = Offset(size.width * (.08f + index * .22f), size.height * .68f)
+                if (preview.appTileStyle == AppTileStyle.Circle) drawCircle(c.accent,
+                    tileWidth / 2, origin + Offset(tileWidth / 2, tileHeight / 2))
+                else drawRoundRect(c.accent, origin, androidx.compose.ui.geometry.Size(tileWidth, tileHeight),
+                    androidx.compose.ui.geometry.CornerRadius(4f))
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ShellButton(style.label, selected = preview == current, onClick = apply)
+            Text(style.description, color = c.muted, fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+private fun SettingsPage(
+    p: Preferences, busy: Boolean, progress: Float, active: Boolean,
     installedVersion: String, updateStatus: String, updateBusy: Boolean, availableVersion: String?,
     onCheckUpdates: () -> Unit, onInstallUpdate: () -> Unit,
     change: (Preferences) -> Unit, close: () -> Unit,
@@ -737,11 +813,12 @@ private fun SettingsPanel(
 ) {
     val c = LocalShellColors.current
     val first = remember { FocusRequester() }
-    var category by remember { mutableStateOf("Wallpaper") }
-    val categories = listOf("Wallpaper", "Appearance", "Glass", "Layout", "Motion", "System")
+    var category by remember { mutableStateOf("Styles") }
+    val categories = listOf("Styles", "Wallpaper", "Appearance", "Glass", "Layout", "Motion", "System")
     val railFocus = remember { List(categories.size) { FocusRequester() } }
     val contentFocus = remember { FocusRequester() }
     val descriptions = mapOf(
+        "Styles" to "Start with a look. Make every detail your own.",
         "Wallpaper" to "Your artwork sets the mood. The colors follow.",
         "Appearance" to "A palette that feels like you.",
         "Glass" to "Soft layers, light edges, and space for your wallpaper.",
@@ -749,16 +826,11 @@ private fun SettingsPanel(
         "Motion" to "Give every interaction a little room to breathe.",
         "System" to "Your apps, shared themes, and device settings.",
     )
-    androidx.compose.ui.window.Popup(
-        alignment = Alignment.Center, onDismissRequest = close,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true, dismissOnBackPress = true),
-    ) {
-        LaunchedEffect(Unit) { delay(80); railFocus[0].requestFocus() }
-        BoxWithConstraints(Modifier.fillMaxWidth(.92f).fillMaxHeight(.91f)
+    Box(Modifier.fillMaxSize().focusProperties { canFocus = active }) {
+        LaunchedEffect(active) { if (active) { delay(80); railFocus[0].requestFocus() } }
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 20.dp)
             .graphicsLayer {
                 alpha = progress.coerceIn(0f, 1f)
-                scaleX = .96f + .04f * progress
-                scaleY = .96f + .04f * progress
                 translationY = (1f - progress) * 30.dp.toPx()
             }) {
             val narrow = maxWidth < 720.dp
@@ -775,13 +847,13 @@ private fun SettingsPanel(
                     left = FocusRequester.Cancel
                 }
             }
-            GlassFrame(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxSize().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!narrow) {
                         Column(Modifier.width(170.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✦  ayame", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                            Text("Your TV. Your way.", color = c.muted, fontSize = 12.sp)
+                            ProtectedLabel("Settings", fontSize = 24)
+                            ProtectedLabel("Your TV. Your way.")
                             SectionTitle("Personalize")
                             categories.forEachIndexed { index, name ->
                                 ShellButton(name, Modifier.fillMaxWidth().then(railModifier(index)), selected = category == name,
@@ -799,7 +871,7 @@ private fun SettingsPanel(
                                 Text(category, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
                                 Text(descriptions[category].orEmpty(), color = c.muted, fontSize = 12.sp)
                             }
-                            ShellButton("Done", Modifier.focusRequester(first).focusProperties {
+                            ShellButton("Back to Home", Modifier.focusRequester(first).focusProperties {
                                 left = railFocus[categories.indexOf(category)]
                                 down = contentFocus
                                 up = FocusRequester.Cancel
@@ -824,6 +896,28 @@ private fun SettingsPanel(
                             Column(Modifier.fillMaxSize().focusProperties { canFocus = page == category }
                                 .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 when (page) {
+                                    "Styles" -> {
+                                        SectionTitle("Home presets")
+                                        Text("Presets keep your wallpaper, colors, favorites, and motion preferences. Every detail below can be changed independently.",
+                                            color = c.muted, fontSize = 13.sp)
+                                        HomeStyle.entries.forEach { style ->
+                                            StylePreview(style, p) { change(style.applyTo(p)) }
+                                        }
+                                        SectionTitle("Make it yours")
+                                        ChoiceSetting("Top bar", NavigationStyle.entries, p.navigationStyle, { it.label }) {
+                                            change(p.copy(navigationStyle = it))
+                                        }
+                                        ChoiceSetting("App tile design", AppTileStyle.entries, p.appTileStyle, { it.label }) {
+                                            change(p.copy(appTileStyle = it))
+                                        }
+                                        StepSetting("Icon size", "${p.iconScale}%",
+                                            { change(p.copy(iconScale = (p.iconScale - 5).coerceAtLeast(45))) },
+                                            { change(p.copy(iconScale = (p.iconScale + 5).coerceAtMost(90))) })
+                                        ChoiceSetting("Clock position", ClockPlacement.entries, p.clockPlacement, { it.label }) {
+                                            change(p.copy(clockPlacement = it))
+                                        }
+                                        ToggleSetting("Show date", p.showDate) { change(p.copy(showDate = !p.showDate)) }
+                                    }
                                     "Wallpaper" -> {
                                         SectionTitle("Your collection")
                                         SettingAction("Wallpaper gallery", "Preview and apply your local wallpapers", openGallery)
@@ -847,7 +941,7 @@ private fun SettingsPanel(
                                         Row(Modifier.fillMaxWidth().focusGroup().horizontalScroll(rememberScrollState())) {
                                             presets.forEachIndexed { index, (name, seed) ->
                                                 ShellButton(name, Modifier.focusRequester(presetFocus[index]).focusProperties {
-                                                    left = if (index > 0) presetFocus[index - 1] else railFocus[1]
+                                                    left = if (index > 0) presetFocus[index - 1] else railFocus[categories.indexOf("Appearance")]
                                                     right = if (index < presets.lastIndex) presetFocus[index + 1] else FocusRequester.Cancel
                                                 }, selected = !p.automaticColors && p.seed == seed.toInt()) {
                                                     change(p.copy(seed = seed.toInt(), automaticColors = false))
@@ -903,7 +997,7 @@ private fun SettingsPanel(
                                         SectionTitle("Apps & device")
                                         ToggleSetting("Include non-TV apps", p.showMobileApps) { change(p.copy(showMobileApps = !p.showMobileApps)) }
                                         SettingAction("Android settings", "Wi-Fi, Bluetooth, display, and sound", system)
-                                        SettingAction("Home app", "Choose the default launcher if supported", home)
+                                        SettingAction("Use Ayame as Home", "Choose Ayame for the remote's Home button", home)
                                         SectionTitle("Share your rice")
                                         SettingAction("Export theme", "Save your appearance, layout, and favorite order", export)
                                         SettingAction("Import theme", "Apply an Ayame TV JSON theme", import)

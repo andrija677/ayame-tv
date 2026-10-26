@@ -81,7 +81,7 @@ private_gallery=/sdcard/Android/data/dev.andrija.ayametv/files/Pictures/Wallpape
 shared_gallery=/sdcard/Pictures/Ayame
 "$adb" -s "$serial" shell mkdir -p "$private_gallery" "$shared_gallery"
 shopt -s nullglob
-images=("$asset_dir"/*.jpg "$asset_dir"/*.webp)
+images=("$asset_dir"/*.jpg "$asset_dir"/*.jpeg "$asset_dir"/*.png "$asset_dir"/*.webp)
 for image in "${images[@]}"; do
     "$adb" -s "$serial" push "$image" "$private_gallery/"
     "$adb" -s "$serial" push "$image" "$shared_gallery/"
@@ -90,3 +90,4 @@ done
 "$adb" -s "$serial" shell am start -n dev.andrija.ayametv/.MainActivity
 echo "Copied ${#images[@]} wallpapers. Open Settings → Wallpaper gallery to see available images."
 echo 'Import wallpaper opens Material Files; browse Internal storage → Pictures → Ayame.'
+bash "$project_dir/scripts/add-color-test-wallpapers.sh" "$serial"

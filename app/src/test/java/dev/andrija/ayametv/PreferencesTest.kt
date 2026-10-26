@@ -13,6 +13,8 @@ class PreferencesTest {
             motionScale = 175, columns = 7, roundness = 8, surfaceOpacity = 65,
             wallpaperDim = 40, showClock = false, clock24 = false, showLabels = false,
             showMobileApps = true, favorites = listOf("org.example.player/.TV", "org.example.browser/.Main"),
+            navigationStyle = NavigationStyle.Dock, appTileStyle = AppTileStyle.Circle,
+            iconScale = 85, clockPlacement = ClockPlacement.Right, showDate = false,
         )
         assertEquals(original, Preferences.parse(JSONObject(original.json().toString())))
     }
@@ -62,5 +64,34 @@ class PreferencesTest {
     @Test fun importedSeedIsAlwaysOpaque() {
         val parsed = Preferences.parse(JSONObject().put("seed", 0x00AABBCC))
         assertEquals(0xFFAABBCC.toInt(), parsed.seed)
+    }
+
+    @Test fun unknownStylesFallBackAndIconScaleIsBounded() {
+        val parsed = Preferences.parse(JSONObject().put("navigationStyle", "future")
+            .put("appTileStyle", "unknown").put("clockPlacement", "somewhere").put("iconScale", 999))
+        assertEquals(NavigationStyle.Bar, parsed.navigationStyle)
+        assertEquals(AppTileStyle.Banner, parsed.appTileStyle)
+        assertEquals(ClockPlacement.Left, parsed.clockPlacement)
+        assertEquals(90, parsed.iconScale)
+    }
+
+    @Test fun presetsKeepPersonalContentAndMotionPreferences() {
+        val original = Preferences(seed = 0xFF123456.toInt(), automaticColors = false,
+            light = true, animations = false, bouncyAnimations = false, motionScale = 175,
+            favorites = listOf("org.player/.Main"), showMobileApps = true, wallpaperDim = 55)
+        HomeStyle.entries.forEach { style ->
+            val applied = style.applyTo(original)
+            assertEquals(original.seed, applied.seed)
+            assertEquals(original.automaticColors, applied.automaticColors)
+            assertEquals(original.light, applied.light)
+            assertEquals(original.favorites, applied.favorites)
+            assertEquals(original.showMobileApps, applied.showMobileApps)
+            assertEquals(original.wallpaperDim, applied.wallpaperDim)
+            assertEquals(original.animations, applied.animations)
+            assertEquals(original.bouncyAnimations, applied.bouncyAnimations)
+            assertEquals(original.motionScale, applied.motionScale)
+            assertEquals(applied, Preferences.parse(JSONObject(applied.json().toString())))
+        }
+        assertEquals(4, HomeStyle.entries.map { it.applyTo(original) }.distinct().size)
     }
 }

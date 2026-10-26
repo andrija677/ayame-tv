@@ -5,11 +5,10 @@ A quiet, colorful home for Android TV and Google TV. Inspired by the original
 floating surfaces, rounded controls, and deliberate motion. Built in Kotlin
 and Jetpack Compose. MIT licensed.
 
-**Early development:** the debug build and unit-test workflow are operational,
-and the launcher is being tested in an Android TV emulator. The initial target
-device is the Xiaomi TV Stick 4K, 2nd generation. Compatibility and animation
-performance still need testing on that actual device before using Ayame as the
-default home.
+**Early development:** signed releases and CI are operational. Ayame is being
+tested in an Android TV emulator and on a Xiaomi TV Stick 4K, 2nd generation.
+The launcher runs on the Stick, but frame pacing and firmware-specific Home
+behavior are still being tuned.
 
 ## First version
 
@@ -18,6 +17,11 @@ default home.
 - Import a local wallpaper and extract its accent using AndroidX Palette.
 - Derive a coordinated light or dark palette; manual accent presets and hue control.
 - Animated focus scaling, button colors, palette transitions, and settings entry.
+- Full-page settings with a category rail and keyboard/remote navigation.
+- Four editable home presets: Ayame, Orbit, Quiet, and Cinema. Mix full-bar,
+  centered-dock, or minimal navigation with TV banners, rounded icons, or circles.
+- Adjust icon size, clock alignment, and date visibility independently. Style
+  presets retain your wallpaper, colors, favorites, and motion preferences.
 - Adjust grid columns, corners, surface opacity, wallpaper dimming, clock, labels,
   and motion duration. Preferences persist between launches.
 - Adapt columns, tile widths, margins, clock, and panel width to available window
@@ -26,6 +30,7 @@ default home.
 - Export and import a versioned JSON theme, including favorite order.
 - Refresh the app list after installation, removal, and returning home.
 - A manual GitHub release updater with APK checksum and signing-key checks.
+- Shared, background-prepared wallpaper frost instead of per-tile live blur.
 - No advertising, analytics, account, or app backend. Network access happens
   only when you request an update check or download.
 
@@ -35,6 +40,10 @@ Matugen. Widgets, custom fonts, custom rows, and additional motion presets are
 future work.
 
 ## Build on Arch / EndeavourOS
+
+For personal-use wallpaper samples from My Dress-Up Darling, Roshidere, Bunny
+Girl Senpai, and a local wallpaper collection, see
+[color-test setup](docs/COLOR_TEST_WALLPAPERS.md). These images stay outside the APK.
 
 From this project directory:
 

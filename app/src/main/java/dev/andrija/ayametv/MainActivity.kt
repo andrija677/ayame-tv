@@ -8,6 +8,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ClipData
 import android.graphics.Bitmap
+import android.app.role.RoleManager
+import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -30,6 +32,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    private val homeRoleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) message("Ayame TV is now your default Home app.")
+        else message("Home selection was not changed. Some TVs require setup through ADB.")
+    }
     private lateinit var store: LauncherStore
     private var preferences by mutableStateOf(Preferences())
     private var apps by mutableStateOf<List<LauncherApp>>(emptyList())
@@ -148,8 +154,31 @@ class MainActivity : ComponentActivity() {
                 onExport = { safePicker { exportTheme.launch("ayame-tv-theme.json") } },
                 onImport = { safePicker { importTheme.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) } },
                 onSystemSettings = { safeStart(Intent(Settings.ACTION_SETTINGS)) },
-                onHomeSettings = { safeStart(Intent(Settings.ACTION_HOME_SETTINGS)) },
+                onHomeSettings = ::chooseHomeApp,
             )
+        }
+    }
+
+    private fun chooseHomeApp() {
+        if (Build.VERSION.SDK_INT >= 29) {
+            val roles = getSystemService(RoleManager::class.java)
+            if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                if (roles.isRoleHeld(RoleManager.ROLE_HOME)) {
+                    message("Ayame TV is already your default Home app.")
+                    return
+                }
+                try {
+                    homeRoleRequest.launch(roles.createRequestRoleIntent(RoleManager.ROLE_HOME))
+                    return
+                } catch (_: ActivityNotFoundException) {
+                    // Some TV firmware exposes the role without a working picker.
+                }
+            }
+        }
+        try {
+            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+        } catch (_: ActivityNotFoundException) {
+            message("This TV hides Home selection. Use the Ayame TV ADB setup from your computer.")
         }
     }
 
