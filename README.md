@@ -43,7 +43,8 @@ future work.
 
 For personal-use wallpaper samples from My Dress-Up Darling, Roshidere, Bunny
 Girl Senpai, and a local wallpaper collection, see
-[color-test setup](docs/COLOR_TEST_WALLPAPERS.md). These images stay outside the APK.
+[wallpaper pack](docs/COLOR_TEST_WALLPAPERS.md). Version 0.2.2 includes all twelve
+images in the APK, ready to use offline in the wallpaper gallery.
 
 From this project directory:
 
@@ -88,15 +89,16 @@ and Escape to navigate. Emulator logs are in `.tooling/tv-emulator.log`.
 The emulator is useful for layout and input testing; real Stick performance,
 firmware integration, and remote-specific behavior still need hardware checks.
 
-For the slower-motion demo with local Marin Kitagawa wallpaper samples and a
-document picker, run `bash scripts/update-tv-demo.sh`. This rebuilds Ayame, opens
-the virtual TV, installs Material Files from its official upstream release,
-and downloads two anime images into ignored `.tooling/test-wallpapers/` and
-the emulator. Sources are recorded alongside the downloads. The test images are
-not bundled in the APK or licensed as part of this project. Settings → Wallpaper
-gallery can apply them without any external picker; Import wallpaper uses
-Material Files to browse `Pictures/Ayame`. The gallery samples live in app-owned
-external storage and need no broad storage permission in Ayame.
+The APK includes twelve wallpapers. Open Settings → Wallpaper → Wallpaper gallery
+to choose one without a network connection, ADB, or a file manager. The built-in
+pack is prepared in app cache on first use; user imports remain available too.
+Sources are listed in [third-party notices](THIRD_PARTY_NOTICES.md).
+
+For emulator companion apps and optional shared wallpaper files, run
+`bash scripts/update-tv-demo.sh`. This rebuilds Ayame, opens the virtual TV,
+installs Material Files from its official upstream release, and copies test
+images into shared `Pictures/Ayame`. The companion app is only needed when you
+want an external file picker for your own images.
 
 Motion now uses slower eased transitions, animated tile lift, wallpaper dissolves,
 and coordinated palette changes. The motion-duration control still adjusts the

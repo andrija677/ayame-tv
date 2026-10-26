@@ -1,0 +1,66 @@
+{
+  "packVersion": 1,
+  "notice": "Artwork is included for wallpaper testing and is excluded from the source-code MIT license. Credits and original sources are listed below.",
+  "images": [
+    {
+      "file": "local-warm-sunset.jpg",
+      "source": "User-provided wallpaper collection: Pictures/wallpapers/pywal/city_sunset.jpg",
+      "sha256": "c1d5580de4e2ad9da92952e708b4c79cbfe49239ff5910a4d4797a4ddc56683b"
+    },
+    {
+      "file": "local-spring-green.jpg",
+      "source": "User-provided wallpaper collection: Pictures/wallpapers/pywal/spring.jpg",
+      "sha256": "849902eea5a2accac49a3bc4ada4bcd7afc89f5d0b078902fa7006f315116f55"
+    },
+    {
+      "file": "local-orange-cloud.png",
+      "source": "User-provided wallpaper collection: Pictures/wallpapers/pywal/orange_cloud.png",
+      "sha256": "1644e31bb41a21577ba6023c549dfd54937ffec3323a3efa61c71b242861ee33"
+    },
+    {
+      "file": "local-cotton-candy.jpg",
+      "source": "User-provided wallpaper collection: Pictures/wallpapers/pywal/cotton_candy.jpg",
+      "sha256": "add0d3121ad1756056a753537d198a665f3894c648fa706e07a50fca1492fe7d"
+    },
+    {
+      "file": "local-deep-blue.png",
+      "source": "User-provided wallpaper collection: Pictures/wallpapers/nightfox/earth-in-space.png",
+      "sha256": "2ba117bdca89546aa19d42e89af1bf2de4079c2c82254e43806653ce0274067f"
+    },
+    {
+      "file": "local-rain-city.png",
+      "source": "User-provided wallpaper collection: Pictures/wallpapers/nightfox/ign_cityRain.png",
+      "sha256": "45d1d06bd5284aa840bfbe0559a6667279316cd3535f048e9475f98a217c6f4f"
+    },
+    {
+      "file": "marin-bright.webp",
+      "source": "https://www.oneesports.gg/anime/reasons-to-watch-my-dress-up-darling/",
+      "sha256": "c25bbb2b588342f84c522c9add7a186b73a8726ab32387c08a60cfc28c855af4"
+    },
+    {
+      "file": "marin-festival.jpg",
+      "source": "https://www.sma.co.jp/s/sma/news/detail/97567?link=ROBO004",
+      "sha256": "ad01de1e7c4bb64662cdb78722c62927a3004d9db0f6c86ec4d6ddc1b30367a1"
+    },
+    {
+      "file": "roshidere-alya-pink.jpg",
+      "source": "https://x.com/roshidere/status/1874289451985420423",
+      "sha256": "579df0e113caec299520486f3f81d54d89f38a83d7613139f28b0992e14a607f"
+    },
+    {
+      "file": "roshidere-alya-seaside.jpg",
+      "source": "https://animecorner.me/roshidere-season-2-reveals-new-teaser-visual/",
+      "sha256": "67c4e55396381dbbc22f54cff0949593b944b2b2e655e607ecd4fcd1d65f0d5b"
+    },
+    {
+      "file": "bunny-girl-senpai-sunset.jpg",
+      "source": "https://ao-buta.com/special/icon_wp/index.html",
+      "sha256": "3d4219d1fabe0257e289ca590931d62fd3ad89e8e5efd8ce56dc267ac4f9b6f5"
+    },
+    {
+      "file": "bunny-girl-senpai-shrine.jpg",
+      "source": "https://ao-buta.com/dearfriend/special/memorialvisual/digicon/",
+      "sha256": "3ab78ecf67ddfe12f544bae19b4d22a2514845177d54eb8856ef751821bf87c3"
+    }
+  ]
+}

@@ -53,6 +53,8 @@ jobs:
         run: ./gradlew --no-daemon :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
       - name: Prepare release assets
         run: python scripts/create-release-metadata.py --apk app/build/outputs/apk/release/app-release.apk --output release-assets
+      - name: Verify built-in wallpaper pack
+        run: python scripts/verify-wallpaper-pack.py --apk app/build/outputs/apk/release/app-release.apk
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

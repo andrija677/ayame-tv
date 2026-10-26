@@ -1035,7 +1035,7 @@ private fun WallpaperGallery(
             Text("Select an image to apply its wallpaper and colors.", color = c.muted, fontSize = 13.sp)
             Spacer(Modifier.height(16.dp))
             if (images.isEmpty()) {
-                EmptyState("No local wallpapers yet", "Run scripts/setup-tv-wallpapers.sh, then reopen this gallery.")
+                EmptyState("No wallpapers available", "Import an image from Settings → Wallpaper, then try again.")
             }
             LazyVerticalGrid(columns = GridCells.Adaptive(180.dp), modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp),

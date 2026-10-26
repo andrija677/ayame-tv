@@ -118,8 +118,30 @@ class LauncherStore(private val context: Context) {
     val galleryDirectory = File(context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES), "Wallpapers")
         .apply { mkdirs() }
 
-    fun gallery(): List<LocalWallpaper> = galleryDirectory.listFiles().orEmpty()
+    // Asset extraction runs only when the gallery opens, on the caller's IO
+    // dispatcher. Cache eviction is harmless: the pack is recreated from the APK.
+    private fun bundledWallpapers(): List<File> {
+        val directory = File(context.cacheDir, "bundled-wallpapers-v1").apply { mkdirs() }
+        return context.assets.list("wallpapers").orEmpty()
+            .filter { it.substringAfterLast('.').lowercase() in setOf("jpg", "jpeg", "png", "webp") }
+            .map { name ->
+                val target = File(directory, name)
+                if (!target.isFile || target.length() == 0L) {
+                    val temporary = File(directory, "$name.part")
+                    try {
+                        context.assets.open("wallpapers/$name").use { input ->
+                            temporary.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        check(temporary.renameTo(target)) { "Could not prepare bundled wallpaper" }
+                    } finally { temporary.delete() }
+                }
+                target
+            }
+    }
+
+    fun gallery(): List<LocalWallpaper> = (bundledWallpapers() + galleryDirectory.listFiles().orEmpty())
         .filter { it.isFile && it.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp") }
+        .distinctBy { it.name }
         .sortedBy { it.name }.take(40).mapNotNull { file ->
             runCatching {
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

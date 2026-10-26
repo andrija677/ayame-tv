@@ -62,6 +62,11 @@ within the window and their contents must scroll, including app options.
     is open. Verify the category rail has one continuous surface, with legible
     headings, selected/unselected labels, and footer. Repeat with glass/frost off,
     both appearances, and enlarged text. The content surface must stay legible too.
+20. On a fresh 0.2.2 installation with networking off, open the wallpaper gallery.
+    All twelve bundled images must appear without a picker or ADB copies. Apply
+    one, restart, and verify persistence. Clear only app cache in Android settings
+    and reopen the gallery; the built-in pack must recreate itself. User imports
+    and the selected wallpaper must survive an ordinary in-place app update.
 
 Useful diagnostics with an already connected TV:
 

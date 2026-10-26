@@ -16,8 +16,9 @@ when it needs authentication. It verifies the account is `andrija677`, creates a
 persistent local signing key, builds the debug and signed release APKs, runs
 checks, commits project source, creates the public repository if absent, uploads
 the signing material to encrypted repository secrets, and pushes `main` plus the
-version tag. No key, password, downloaded wallpaper, SDK, build output, or APK is
-committed. The signed-release workflow builds and publishes the APK and its
+version tag. No key, password, SDK, build output, or APK is committed. The
+curated wallpaper pack in `app/src/main/assets/wallpapers` is included in source
+and APK assets with attribution; unrelated test downloads remain ignored. The signed-release workflow builds and publishes the APK and its
 `update.json` metadata. The script prints repository, Actions, and release URLs.
 
 The ignored `.signing/` directory contains your private release key and passwords.

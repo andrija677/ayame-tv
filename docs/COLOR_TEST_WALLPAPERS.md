@@ -1,19 +1,25 @@
 # Personal wallpaper color tests
 
-Run `bash scripts/add-color-test-wallpapers.sh` for the emulator, or pass a
-connected TV's ADB serial as its first argument. The script keeps the installed
-APK so that an older official release can still test the updater.
+Version 0.2.2 bundles all twelve images directly in the APK. Open Settings →
+Wallpaper → Wallpaper gallery on a fresh installation to use the pack offline.
+No computer, external file manager, storage permission, or download is required.
 
-It copies six local images from `~/Pictures/wallpapers` when available: warm
-sunset, spring green, orange clouds, pastel sky, deep-blue space, and a rainy city.
-It also downloads two images from each of My Dress-Up Darling, Roshidere, and
-Bunny Girl Senpai. These are existing anime/promotional images, not generated art.
-Some promotional images are portrait-oriented and will be cropped by the TV.
+The pack contains warm sunset, spring green, orange clouds, pastel sky, deep-blue
+space, and a rainy city from the user's local collection, plus two images each
+from My Dress-Up Darling, Roshidere, and Bunny Girl Senpai. These are existing
+images, not generated art. Some promotional images are portrait-oriented and
+will be cropped by the TV.
 
-Images live in ignored `.tooling/test-wallpapers`, then are copied to both the
-app's wallpaper gallery and shared `Pictures/Ayame` on the target. They are not
-included in the APK or the source license. Download/source attribution is saved
-as `color-test-sources.json` beside the local test images.
+The gallery prepares cached files and bounded thumbnails on a worker dispatcher.
+Clearing app cache recreates the built-in pack; applying an image still uses the
+normal bounded wallpaper import and automatic palette extraction.
+
+Per-image sources and hashes are in `app/src/main/assets/wallpapers/SOURCES.json`
+and are included in the APK. Artwork is excluded from the source-code MIT license.
+
+The optional `bash scripts/add-color-test-wallpapers.sh` copies images to shared
+`Pictures/Ayame` on the emulator; pass a connected TV's ADB serial to target a TV.
+This script keeps the installed APK and is no longer needed for the built-in gallery.
 
 Sources:
 

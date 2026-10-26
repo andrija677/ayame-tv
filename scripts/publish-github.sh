@@ -53,6 +53,7 @@ bash scripts/setup-release-signing.sh
 ./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintRelease --console=plain
 python scripts/test_select_tv_image.py
 python scripts/test_release_metadata.py
+python scripts/verify-wallpaper-pack.py --apk app/build/outputs/apk/release/app-release.apk
 git add --all
 if git diff --cached --name-only | grep -Eq '(^|/)(\.tooling|\.signing|\.gradle|build)(/|$)|\.(jks|keystore|apk)$'; then
     echo 'Unexpected build output or signing material is staged; publication stopped.' >&2
