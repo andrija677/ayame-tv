@@ -850,22 +850,23 @@ private fun SettingsPage(
             Box(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxSize().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!narrow) {
-                        Column(Modifier.width(170.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ProtectedLabel("Settings", fontSize = 24)
-                            ProtectedLabel("Your TV. Your way.")
-                            SectionTitle("Personalize")
-                            categories.forEachIndexed { index, name ->
-                                ShellButton(name, Modifier.fillMaxWidth().then(railModifier(index)), selected = category == name,
-                                    onFocus = { category = name }) { category = name }
+                        GlassFrame(Modifier.width(190.dp).fillMaxHeight()) {
+                            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Settings", color = c.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Your TV. Your way.", color = c.muted, fontSize = 12.sp)
+                                SectionTitle("Personalize")
+                                categories.forEachIndexed { index, name ->
+                                    ShellButton(name, Modifier.fillMaxWidth().then(railModifier(index)), selected = category == name,
+                                        onFocus = { category = name }) { category = name }
+                                }
+                                Spacer(Modifier.height(18.dp))
+                                Text("Ayame TV · Open source", color = c.muted, fontSize = 11.sp)
                             }
-                            Spacer(Modifier.height(18.dp))
-                            Text("Ayame TV · Open source", color = c.muted, fontSize = 11.sp)
                         }
                     }
-                    Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(20.dp))
-                        .background(lerp(if (p.light) Color(0xFFF1F4FA) else Color(0xFF111722), c.background, .22f)
-                            .copy(alpha = if (p.glassEnabled) .64f else .96f)).padding(22.dp)) {
+                    GlassFrame(Modifier.weight(1f).fillMaxHeight()) {
+                    Column(Modifier.fillMaxSize().padding(22.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(category, color = c.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
@@ -1006,6 +1007,7 @@ private fun SettingsPage(
                             }
                         }
                         }
+                    }
                     }
                 }
             }

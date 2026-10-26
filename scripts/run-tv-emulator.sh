@@ -2,6 +2,15 @@
 # Create a private Android TV AVD, boot it on the desktop, and install Ayame.
 set -euo pipefail
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+boot_only=false
+gpu_mode=auto
+for option in "$@"; do
+    case "$option" in
+        --boot-only) boot_only=true ;;
+        --software-gpu) gpu_mode=software ;;
+        *) echo "Unknown option: $option. Supported: --boot-only --software-gpu" >&2; exit 1 ;;
+    esac
+done
 export JAVA_HOME="$project_dir/.tooling/jdk"
 export ANDROID_HOME="$project_dir/.tooling/android-sdk"
 export ANDROID_AVD_HOME="$project_dir/.tooling/avd"
@@ -14,7 +23,9 @@ apk="$project_dir/app/build/outputs/apk/debug/app-debug.apk"
 [[ -x "$sdkmanager" && -x "$JAVA_HOME/bin/java" ]] || {
     echo 'Run scripts/setup-android.sh first.' >&2; exit 1;
 }
-[[ -f "$apk" ]] || { echo 'Build the debug APK first: ./gradlew :app:assembleDebug' >&2; exit 1; }
+if [[ "$boot_only" != true && ! -f "$apk" ]]; then
+    echo 'Build the debug APK first: ./gradlew :app:assembleDebug' >&2; exit 1
+fi
 mkdir -p "$ANDROID_AVD_HOME"
 if [[ ! -x "$ANDROID_HOME/emulator/emulator" ]]; then
     "$sdkmanager" --sdk_root="$ANDROID_HOME" emulator
@@ -62,7 +73,7 @@ if ! adb -s "$serial" get-state >/dev/null 2>&1; then
     # Native Qt Wayland support varies between emulator builds; use XWayland.
     # env applies only to the emulator process and does not change the desktop.
     nohup env QT_QPA_PLATFORM=xcb "$emulator" -avd "$avd_name" -port 5580 \
-        -gpu auto -no-boot-anim -no-snapshot-load \
+        -gpu "$gpu_mode" -no-boot-anim -no-snapshot-load \
         > "$project_dir/.tooling/tv-emulator.log" 2>&1 < /dev/null &
     emulator_pid=$!
     echo "Opening virtual TV (log: .tooling/tv-emulator.log; pid $emulator_pid)…"
@@ -83,6 +94,11 @@ done
 if [[ "$booted" != true ]]; then
     echo 'TV boot timed out. Check .tooling/tv-emulator.log.' >&2
     exit 1
+fi
+if [[ "$boot_only" == true ]]; then
+    adb -s "$serial" shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
+    echo 'TV booted. Installed apps and user data were kept; no APK was installed.'
+    exit 0
 fi
 install_log="$project_dir/.tooling/tv-install.log"
 # Avoid streamed installation while the emulator is finishing its first boot.

@@ -58,6 +58,10 @@ within the window and their contents must scroll, including app options.
     position, and date visibility. Test both app pages at compact and large sizes.
     Export/import the custom style and an older theme without style fields.
     Presets must keep wallpaper colors, favorites, app visibility, and motion settings.
+19. Change from a dark wallpaper to the brightest local/anime images while Settings
+    is open. Verify the category rail has one continuous surface, with legible
+    headings, selected/unselected labels, and footer. Repeat with glass/frost off,
+    both appearances, and enlarged text. The content surface must stay legible too.
 
 Useful diagnostics with an already connected TV:
 
