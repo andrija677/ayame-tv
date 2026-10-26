@@ -50,6 +50,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -529,6 +530,7 @@ private fun TopNavigation(
     val p = LocalPreferences.current
     val c = LocalShellColors.current
     val density = LocalDensity.current
+    val minimal = p.navigationStyle == NavigationStyle.Minimal
     var homeWidth by remember { mutableIntStateOf(90) }
     var appsWidth by remember { mutableIntStateOf(100) }
     val tabGap = with(density) { 12.dp.toPx() }
@@ -544,26 +546,30 @@ private fun TopNavigation(
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box {
-                Box(Modifier.matchParentSize()) {
+                Box(Modifier.matchParentSize().zIndex(if (minimal) 1f else 0f)) {
                     Box(Modifier.align(if (p.navigationStyle == NavigationStyle.Minimal) Alignment.BottomStart else Alignment.TopStart)
                         .offset { IntOffset(pillX.roundToInt(), 0) }
                         .width(with(density) { pillWidth.coerceAtLeast(1f).toDp() })
                         .then(if (p.navigationStyle == NavigationStyle.Minimal) Modifier.height(3.dp) else Modifier.fillMaxHeight())
-                        .clip(RoundedCornerShape(50)).background(c.accent.copy(alpha = .22f))
+                        .clip(RoundedCornerShape(50)).background(c.accent.copy(alpha = if (minimal) 1f else .22f))
                         .border(1.dp, c.accent.copy(alpha = .30f), RoundedCornerShape(50)))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ShellButton("Home", navigationModifier(0).onSizeChanged { homeWidth = it.width },
+                        protectWallpaper = minimal,
                         restore = restoreKey == "nav:home", generation = generation,
                         onFocus = { onFocus("nav:home"); onHome() }, onClick = onHome)
                     ShellButton("All apps", navigationModifier(1).onSizeChanged { appsWidth = it.width },
+                        protectWallpaper = minimal,
                         restore = restoreKey == "nav:apps", generation = generation,
                         onFocus = { onFocus("nav:apps"); onApps() }, onClick = onApps)
                 }
             }
             ShellButton("Search", navigationModifier(2), restore = restoreKey == "nav:search", generation = generation,
+                protectWallpaper = minimal,
                 onFocus = { onFocus("nav:search") }, onClick = onSearch)
             ShellButton("Settings", navigationModifier(3), restore = restoreKey == "nav:settings", generation = generation,
+                protectWallpaper = minimal,
                 onFocus = { onFocus("nav:settings") }, onClick = onSettings)
             if (p.showClock && compact) Clock(p.clock24, 16f, compact = true)
         }
@@ -635,6 +641,7 @@ private fun Clock(use24: Boolean, clockSize: Float, modifier: Modifier = Modifie
 @Composable
 private fun ShellButton(
     text: String, modifier: Modifier = Modifier, selected: Boolean = false,
+    protectWallpaper: Boolean = false,
     restore: Boolean = false, generation: Int = 0, onFocus: () -> Unit = {}, onClick: () -> Unit,
 ) {
     val c = LocalShellColors.current
@@ -642,6 +649,9 @@ private fun ShellButton(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val requester = remember { FocusRequester() }
+    val protection = if (protectWallpaper) remember(c.text, c.surface) {
+        protectText(c.text.toArgb(), c.surface.toArgb())
+    } else null
     LaunchedEffect(generation) { if (restore) { delay(50); requester.requestFocus() } }
     LaunchedEffect(focused) { if (focused) onFocus() }
     val fill by animateColorAsState(
@@ -651,12 +661,14 @@ private fun ShellButton(
     val scale by animateFloatAsState(if (focused) 1.055f else 1f, p.movement(), label = "button lift")
     Box(
         modifier.focusRequester(requester).graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(50)).background(fill)
+            .clip(RoundedCornerShape(50))
+            .background(protection?.let { Color(it.backing).copy(alpha = it.opacity) } ?: Color.Transparent)
+            .background(fill)
             .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = if (focused) c.onAccent else c.text, fontSize = 14.sp,
+        Text(text, color = if (focused) c.onAccent else protection?.let { Color(it.foreground) } ?: c.text, fontSize = 14.sp,
             fontWeight = if (focused || selected) FontWeight.SemiBold else FontWeight.Medium)
     }
 }
