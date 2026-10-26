@@ -75,12 +75,13 @@ The television has already heard enough sales pitches.
 </table>
 
 <details>
-  <summary>Two more from the wallpaper testing department :3</summary>
+  <summary>Wallpaper testing facility :3</summary>
   <br>
   <img src="docs/screenshots/home-seaside-evening.png" alt="Light seaside home during the evening">
   <p><sub>23:54 — checking the wallpaper colors.</sub></p>
   <img src="docs/screenshots/home-seaside-midnight.png" alt="The same light seaside home after midnight">
   <p><sub>00:03 — still checking. Very thorough research.</sub></p>
+  <p><sub>PS: Legends say they are still checking the colors on the same wallpaper.</sub></p>
 </details>
 
 Screenshots are real emulator captures from development builds. Some include
@@ -95,6 +96,7 @@ the emulator toolbar; styling can vary slightly between releases.
 | Full-page Settings with style previews | Light/dark, glass, frost, corners, and opacity | Manual updates from signed GitHub releases |
 | Layout adapts to window size and text scaling | Clock position, icon size, labels, and columns | Import/export appearance as a JSON theme |
 | Twelve bundled wallpapers available offline | Animation duration and optional gentle bounce | Optional inclusion of non-TV apps |
+| Quick Settings from the top bar | Appearance, glass, and motion shortcuts | Network status, device settings, and media volume |
 
 ## Make it yours
 
@@ -139,6 +141,18 @@ Wallpapers are separate from the theme file. Automatic-color themes follow the
 receiving device's wallpaper; disable automatic colors before export to keep
 a particular accent.
 
+### Quick Settings
+
+Open **Quick settings** in the top bar for network status, Wi-Fi/network and
+Bluetooth/accessory settings, media volume, and quick appearance switches.
+The panel follows the wallpaper palette and works with the remote. **Ayame
+settings** opens the full customization page.
+
+Wi-Fi and Bluetooth entries open Android's controls. Direct media-volume buttons
+appear where Android exposes adjustable volume; a fixed-volume TV or external
+audio setup may need its own remote. Firmware can route individual settings
+shortcuts differently, so general Android settings remains available as a fallback.
+
 ## Install
 
 1. Download `ayame-tv-VERSION.apk` from [Releases](https://github.com/andrija677/ayame-tv/releases/latest).
@@ -167,6 +181,8 @@ against release metadata, package name, version, and signing key.
 
 There are no background update checks. Network requests happen when you choose
 to check or download an update; wallpaper processing and preferences stay local.
+Quick Settings reads local network/audio state while its panel is visible; it
+does not fetch an external connectivity test or request location/Bluetooth access.
 
 > [!IMPORTANT]
 > Development builds marked `-dev` use a different signing key from public APKs.

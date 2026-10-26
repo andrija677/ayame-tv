@@ -24,6 +24,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -231,6 +232,8 @@ fun AyameLauncher(
     loaded: Boolean, busy: Boolean, homeRequest: Int,
     installedVersion: String, updateStatus: String, updateBusy: Boolean, availableVersion: String?,
     onCheckUpdates: () -> Unit, onInstallUpdate: () -> Unit,
+    deviceState: DeviceQuickState, onDeviceSettings: (DeviceSettingsTarget) -> Unit,
+    onVolumeChange: (Int) -> Unit, onQuickSettingsVisible: (Boolean) -> Unit,
     gallery: List<LocalWallpaper>?, onOpenGallery: () -> Unit, onDismissGallery: () -> Unit,
     onSelectWallpaper: (LocalWallpaper) -> Unit,
     onPreferences: (Preferences) -> Unit, onLaunch: (LauncherApp) -> Unit,
@@ -265,6 +268,13 @@ fun AyameLauncher(
         LocalBackdrop provides if (frostEnabled) frost else wallpaper) {
         MaterialTheme(colorScheme = scheme, typography = roundedTypography()) {
             var settings by remember { mutableStateOf(false) }
+            var quickSettings by remember { mutableStateOf(false) }
+            DisposableEffect(quickSettings) {
+                onQuickSettingsVisible(quickSettings)
+                onDispose { onQuickSettingsVisible(false) }
+            }
+            val quickProgress by animateFloatAsState(if (quickSettings) 1f else 0f,
+                if (quickSettings) preferences.movement() else tween(preferences.duration(160)), label = "quick settings")
             val panelProgress by animateFloatAsState(if (settings) 1f else 0f,
                 if (settings) preferences.movement() else tween(preferences.duration(220), easing = SoftEase),
                 label = "settings unfold")
@@ -285,7 +295,7 @@ fun AyameLauncher(
             var restoreGeneration by remember { mutableIntStateOf(0) }
             var pendingRestore by remember { mutableStateOf(false) }
             val initialFocus = remember { FocusRequester() }
-            val navigationFocus = remember { listOf(initialFocus, FocusRequester(), FocusRequester(), FocusRequester()) }
+            val navigationFocus = remember { listOf(initialFocus, FocusRequester(), FocusRequester(), FocusRequester(), FocusRequester()) }
             val searchFocus = remember { FocusRequester() }
             val homeScroll = rememberLazyListState()
             val appsScroll = rememberLazyGridState()
@@ -307,12 +317,14 @@ fun AyameLauncher(
             }
             fun closeSettings() { settings = false; restore() }
             fun closeMenu() { selected = null; restore() }
+            fun closeQuickSettings() { quickSettings = false; restore() }
             fun updatePins(app: LauncherApp) {
                 val ids = preferences.favorites
                 onPreferences(preferences.copy(favorites = if (app.id in ids) ids - app.id else ids + app.id))
             }
-            LaunchedEffect(pendingRestore, settings, selected, panelProgress, menuProgress) {
-                if (pendingRestore && !settings && selected == null && panelProgress == 0f && menuProgress == 0f) {
+            LaunchedEffect(pendingRestore, settings, selected, panelProgress, menuProgress, quickSettings, quickProgress) {
+                if (pendingRestore && !settings && selected == null && !quickSettings &&
+                    panelProgress == 0f && menuProgress == 0f && quickProgress == 0f) {
                     val displayed = if (tab == "home" && !searching) {
                         if (pins.isEmpty()) visibleApps else pins
                     } else results
@@ -328,7 +340,7 @@ fun AyameLauncher(
             }
             LaunchedEffect(homeRequest) {
                 if (homeRequest > 0) {
-                    settings = false; selected = null; searching = false; query = ""; tab = "home"
+                    settings = false; selected = null; quickSettings = false; searching = false; query = ""; tab = "home"
                     lastFocused = "nav:home"
                     pendingRestore = true
                 }
@@ -338,6 +350,7 @@ fun AyameLauncher(
             }
             BackHandler {
                 when {
+                    quickSettings -> closeQuickSettings()
                     selected != null -> closeMenu()
                     settings -> closeSettings()
                     searching -> { searching = false; query = ""; restore() }
@@ -379,7 +392,7 @@ fun AyameLauncher(
                 }
                 Wallpaper(wallpaper)
                 if (!settings && panelProgress == 0f) {
-                Column(Modifier.fillMaxSize().focusProperties { canFocus = selected == null }
+                Column(Modifier.fillMaxSize().focusProperties { canFocus = selected == null && !quickSettings }
                     .padding(horizontal = layout.horizontalInset.dp, vertical = layout.verticalInset.dp)) {
                     TopNavigation(tab, layout.compactHeight, navigationFocus, restoreKey, restoreGeneration,
                         onFocus = { lastFocused = it },
@@ -392,7 +405,7 @@ fun AyameLauncher(
                         onHome = { tab = "home"; searching = false; query = "" },
                         onApps = { tab = "apps"; searching = false; query = "" },
                         onSearch = { searching = !searching; query = "" },
-                        onSettings = { settings = true })
+                        onSettings = { settings = true }, onQuickSettings = { quickSettings = true })
                     AnimatedContent(targetState = tab to searching, modifier = Modifier.weight(1f),
                         transitionSpec = {
                             (fadeIn(tween(preferences.duration(220))) +
@@ -516,6 +529,11 @@ fun AyameLauncher(
                 (gallery ?: cachedGallery)?.takeIf { gallery != null || galleryProgress > 0f }?.let { images ->
                     WallpaperGallery(images, galleryProgress, onSelectWallpaper, onDismissGallery)
                 }
+                if (quickSettings || quickProgress > 0f) {
+                    QuickSettingsPanel(preferences, deviceState, quickProgress, quickSettings,
+                        onDeviceSettings, onVolumeChange, onPreferences, ::closeQuickSettings,
+                        onFullSettings = { quickSettings = false; settings = true })
+                }
             }
         }
     }
@@ -525,7 +543,7 @@ fun AyameLauncher(
 private fun TopNavigation(
     tab: String, compact: Boolean, focus: List<FocusRequester>, restoreKey: String?, generation: Int,
     onFocus: (String) -> Unit, onHome: () -> Unit, onApps: () -> Unit,
-    onSearch: () -> Unit, onSettings: () -> Unit, onDown: () -> Unit,
+    onSearch: () -> Unit, onSettings: () -> Unit, onQuickSettings: () -> Unit, onDown: () -> Unit,
 ) {
     val p = LocalPreferences.current
     val c = LocalShellColors.current
@@ -539,7 +557,7 @@ private fun TopNavigation(
         p.movement(), label = "tab width")
     fun navigationModifier(index: Int): Modifier = Modifier.focusRequester(focus[index]).focusProperties {
         left = if (index > 0) focus[index - 1] else FocusRequester.Cancel
-        right = if (index < 3) focus[index + 1] else FocusRequester.Cancel
+        right = if (index < focus.lastIndex) focus[index + 1] else FocusRequester.Cancel
         up = FocusRequester.Cancel
     }
     val navigationContent: @Composable BoxScope.() -> Unit = {
@@ -571,6 +589,9 @@ private fun TopNavigation(
             ShellButton("Settings", navigationModifier(3), restore = restoreKey == "nav:settings", generation = generation,
                 protectWallpaper = minimal,
                 onFocus = { onFocus("nav:settings") }, onClick = onSettings)
+            ShellButton("Quick settings", navigationModifier(4), restore = restoreKey == "nav:quick", generation = generation,
+                protectWallpaper = minimal,
+                onFocus = { onFocus("nav:quick") }, onClick = onQuickSettings)
             if (p.showClock && compact) Clock(p.clock24, 16f, compact = true)
         }
     }
@@ -810,6 +831,72 @@ private fun StylePreview(style: HomeStyle, current: Preferences, apply: () -> Un
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ShellButton(style.label, selected = preview == current, onClick = apply)
             Text(style.description, color = c.muted, fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+private fun QuickSettingsPanel(
+    p: Preferences, device: DeviceQuickState, progress: Float, active: Boolean,
+    openDevice: (DeviceSettingsTarget) -> Unit, volume: (Int) -> Unit,
+    change: (Preferences) -> Unit, close: () -> Unit, onFullSettings: () -> Unit,
+) {
+    val c = LocalShellColors.current
+    val first = remember { FocusRequester() }
+    androidx.compose.ui.window.Popup(alignment = Alignment.Center, onDismissRequest = close,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = active,
+            dismissOnBackPress = active, dismissOnClickOutside = active)) {
+        LaunchedEffect(active) { if (active) { delay(80); first.requestFocus() } }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = .28f * progress.coerceIn(0f, 1f)))
+                .focusProperties { canFocus = false }
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = close))
+            val panelWidth = (maxWidth * .48f).coerceIn(320.dp, 460.dp)
+                .coerceAtMost((maxWidth - 24.dp).coerceAtLeast(1.dp))
+            GlassFrame(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)
+                .width(panelWidth).fillMaxHeight(.92f).graphicsLayer {
+                    alpha = progress.coerceIn(0f, 1f)
+                    translationX = (1f - progress) * 56.dp.toPx()
+                }.focusProperties { canFocus = active }) {
+                Column(Modifier.fillMaxSize().padding(22.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Quick Settings", color = c.text, fontSize = 24.sp,
+                            fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        ShellButton("Close", onClick = close)
+                    }
+                    Text("A few things, within reach.", color = c.muted, fontSize = 12.sp)
+                    Spacer(Modifier.height(12.dp))
+                    CompositionLocalProvider(LocalSettingsRail provides null) {
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).focusGroup(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SectionTitle("Connections")
+                        Box(Modifier.focusRequester(first).focusGroup()) {
+                            SettingAction("Wi-Fi & network", "${device.network} · ${device.connectionDetail}",
+                                { openDevice(DeviceSettingsTarget.Wifi) })
+                        }
+                        SettingAction("Bluetooth & accessories", "Pair or manage your connected devices",
+                            { openDevice(DeviceSettingsTarget.Bluetooth) })
+                        SectionTitle("Sound")
+                        if (device.fixedVolume || device.maxVolume <= 0) {
+                            Text(device.volumeLabel, color = c.muted, fontSize = 13.sp,
+                                modifier = Modifier.padding(horizontal = 12.dp))
+                        } else {
+                            StepSetting("Media volume", device.volumeLabel, { volume(-1) }, { volume(1) })
+                        }
+                        SettingAction("Sound settings", "Audio output and device sound options",
+                            { openDevice(DeviceSettingsTarget.Sound) })
+                        SectionTitle("Your space")
+                        ToggleSetting("Light appearance", p.light) { change(p.copy(light = !p.light)) }
+                        ToggleSetting("Glass surfaces", p.glassEnabled) { change(p.copy(glassEnabled = !p.glassEnabled)) }
+                        ToggleSetting("Animations", p.animations) { change(p.copy(animations = !p.animations)) }
+                        SectionTitle("More controls")
+                        SettingAction("Android settings", "All available device settings",
+                            { openDevice(DeviceSettingsTarget.Android) })
+                        SettingAction("Ayame settings", "Wallpaper, styles, layout, motion, and updates", onFullSettings)
+                    }
+                    }
+                }
+            }
         }
     }
 }

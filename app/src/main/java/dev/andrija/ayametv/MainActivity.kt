@@ -26,6 +26,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -51,6 +54,9 @@ class MainActivity : ComponentActivity() {
     private var availableUpdate by mutableStateOf<AvailableUpdate?>(null)
     private var installedVersion by mutableStateOf("")
     private var pendingInstall: java.io.File? = null
+    private lateinit var deviceControls: DeviceControls
+    private var deviceState by mutableStateOf(DeviceQuickState())
+    private var quickStatusJob: Job? = null
 
     private val installPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         if (packageManager.canRequestPackageInstalls()) pendingInstall?.let { file -> launchInstaller(file) }
@@ -92,6 +98,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = LauncherStore(this)
+        deviceControls = DeviceControls(this)
         updater = ReleaseUpdater(this)
         installedVersion = updater.installedVersion().second
         savedInstanceState?.getString("pendingUpdate")?.let { path ->
@@ -123,6 +130,8 @@ class MainActivity : ComponentActivity() {
                 installedVersion = installedVersion, updateStatus = updateStatus, updateBusy = updateBusy,
                 availableVersion = availableUpdate?.manifest?.versionName,
                 onCheckUpdates = ::checkUpdates, onInstallUpdate = ::downloadUpdate,
+                deviceState = deviceState, onDeviceSettings = ::openDeviceSettings,
+                onVolumeChange = ::adjustVolume, onQuickSettingsVisible = ::observeQuickSettings,
                 gallery = gallery,
                 onOpenGallery = { task { gallery = withContext(Dispatchers.IO) { store.gallery() } } },
                 onDismissGallery = { gallery = null },
@@ -157,6 +166,44 @@ class MainActivity : ComponentActivity() {
                 onHomeSettings = ::chooseHomeApp,
             )
         }
+    }
+
+    private fun observeQuickSettings(visible: Boolean) {
+        quickStatusJob?.cancel()
+        quickStatusJob = null
+        if (visible) quickStatusJob = lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    deviceState = withContext(Dispatchers.IO) { deviceControls.snapshot() }
+                    delay(1500)
+                }
+            }
+        }
+    }
+
+    private fun adjustVolume(direction: Int) {
+        lifecycleScope.launch {
+            try {
+                deviceState = withContext(Dispatchers.IO) {
+                    deviceControls.adjustVolume(direction)
+                    deviceControls.snapshot()
+                }
+            } catch (_: SecurityException) { message("Use your TV remote or Android sound settings to change volume.") }
+        }
+    }
+
+    private fun openDeviceSettings(target: DeviceSettingsTarget) {
+        for (action in target.actions) {
+            try {
+                startActivity(Intent(action))
+                return
+            } catch (_: ActivityNotFoundException) {
+                // TV firmware can omit a particular settings activity.
+            } catch (_: SecurityException) {
+                // Try the public general-settings fallback on restricted firmware.
+            }
+        }
+        message("This TV does not expose that settings screen.")
     }
 
     private fun chooseHomeApp() {

@@ -3,6 +3,14 @@
 `MainActivity.kt` owns lifecycle, activity results, package-change observation,
 background work, persistence, and launching Android activities.
 
+`DeviceControls.kt` reads local network capabilities and media-volume state and
+defines public device-settings routes. Quick Settings polls that local snapshot
+every 1.5 seconds only while its popup is open and the activity is STARTED. The
+activity pauses observation under system settings and cancels it on dismissal.
+Device controls use normal network-state/audio-settings permissions; no SSID,
+location, Bluetooth enumeration, radio toggles, or external status requests are used.
+Fixed-volume devices receive sound-settings access without volume step buttons.
+
 `LauncherData.kt` contains the theme/preferences schema, launcher discovery,
 bounded image import, palette extraction, and theme import/export. Apps are
 discovered through declared launcher-intent queries. No broad package permission

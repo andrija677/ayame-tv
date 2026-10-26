@@ -67,6 +67,19 @@ within the window and their contents must scroll, including app options.
     one, restart, and verify persistence. Clear only app cache in Android settings
     and reopen the gallery; the built-in pack must recreate itself. User imports
     and the selected wallpaper must survive an ordinary in-place app update.
+21. Open Quick Settings using only the remote in every navigation style and on a
+    narrow window. Navigate all controls, close via Back/Close, and confirm focus
+    returns to Quick settings. Open full Ayame Settings and verify its category
+    rail owns focus. Press the remote Home button while the popup is open.
+22. Check Wi-Fi, Ethernet, disconnected, and captive-portal status where available.
+    Open Wi-Fi, Bluetooth, sound, and general settings; return and check state
+    refresh. Test firmware that lacks a dedicated settings action. Change media
+    volume with the panel and remote; on fixed-volume output the +/- controls
+    must be absent. No radio toggle or location/Bluetooth permission prompt should
+    appear. Pause the activity and close the popup to check status polling stops.
+23. Toggle appearance, glass, and animations in Quick Settings. Check contrast on
+    bright/dark wallpapers, immediate transitions with animations off, persistence
+    after restart, and panel scrolling with enlarged text.
 
 Useful diagnostics with an already connected TV:
 
